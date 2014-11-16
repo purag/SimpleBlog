@@ -1,5 +1,5 @@
 <?php
-    //truncate text
+  //truncate text
 	function truncate($string, $limit, $break=".", $pad=". ") {
 		// return with no change if string is shorter than $limit
 		if(strlen($string) <= $limit) return $string;
@@ -13,7 +13,7 @@
 		return $string;
 	}
     
-    // timeago
+  // timeago
 	function ago($time) {
 		$periods = array("second", "minute", "hour", "day", "week", "month", "year", "decade");
 		$lengths = array("60","60","24","7","4.35","12","10");
