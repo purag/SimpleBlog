@@ -15,12 +15,10 @@
       // define global variable within function scope
       global $dbh;
     
-      // create variables out of object passed to count function
       foreach($obj as $key => $value){
         $$key = $value;
       }
     
-      // get tag id in case we are counting within a tag
       $tagSearch = $dbh->prepare("SELECT id FROM tags WHERE name='$tag'");
       $tagSearch->execute();
       $tagFetch = $tagSearch->fetch(PDO::FETCH_ASSOC);
@@ -28,7 +26,7 @@
     
       // get number of rows in table
       if(empty($tag)){
-        $sth = $dbh->prepare("SELECT id FROM posts");
+        $sth = $dbh->prepare("SELECT id FROM posts WHERE draft='false'");
         $sth->execute();
         $nRows = $sth->rowCount();
       } else {
@@ -72,13 +70,13 @@
       
       // query the database. if $tag is not empty, fetch by tag id.
       if(empty($tag)){
-        $qry2 = $dbh->prepare("SELECT * FROM posts ORDER BY timestamp DESC LIMIT $startResult, $pageSize");
+        $qry2 = $dbh->prepare("SELECT * FROM posts WHERE draft='false' ORDER BY timestamp DESC LIMIT $startResult, $pageSize");
         $qry2->execute();
       } else {
         $qry = $dbh->prepare("SELECT post_id FROM post_tags WHERE tag_id=$tagId");
         $qry->execute();
         $postIds = '('.implode(',',$qry->fetchAll(PDO::FETCH_COLUMN, 0)).')';
-        $qry2 = $dbh->prepare("SELECT * FROM posts WHERE id IN $postIds ORDER BY timestamp DESC LIMIT $startResult, $pageSize");
+        $qry2 = $dbh->prepare("SELECT * FROM posts WHERE draft='false' AND id IN $postIds ORDER BY timestamp DESC LIMIT $startResult, $pageSize");
         $qry2->execute();
       }
       
@@ -99,19 +97,6 @@
             $postsString .= '<'.$headerContainerType.' class="'.$headerContainer.'">';
           }
           
-          // post title container
-          $postsString .= '<'.$titleContainerType.' class="'.$titleContainer.'">
-            <a href="'.$href.'post/';
-						
-						if($postLink === 'id'){
-							$postsString .= $post["id"];
-						} else {
-							$postsString .= $post["title_url"];
-						}
-						
-					$postsString .= '">'.$post["title"].'</a>
-						</'.$titleContainerType.'>';
-          
           // date container
           $postsString .= '<'.$dateContainerType.' class="'.$dateContainer.'" title="'.$post["date"].'">';
           
@@ -124,6 +109,19 @@
           
           // date container
           $postsString .= '</'.$dateContainerType.'>';
+          
+          // post title container
+          $postsString .= '<'.$titleContainerType.' class="'.$titleContainer.'">
+            <a href="'.$href.'post/';
+      
+      if($postLink === 'id'){
+        $postsString .= $post["id"];
+      } else {
+        $postsString .= $post["title_url"];
+      }
+      
+      $postsString .= '">'.$post["title"].'</a>
+      </'.$titleContainerType.'>';
           
           // header container
           if($header){
@@ -161,7 +159,7 @@
       // create empty string
       $postTag = '';
       
-      // fetch tag from db based on id
+       // fetch tag from db based on id
       $qry = $dbh->prepare("SELECT * FROM tags WHERE name='$tag'");
       $qry->execute();
       $result = $qry->fetch(PDO::FETCH_ASSOC);
@@ -177,7 +175,7 @@
         if($link){
           $postTag .= ' href="'.$href.$result["name"].'"';
         }
-
+        
         if($container){
           $postTag .= ' class="'.$container.'"';
         }
@@ -212,6 +210,16 @@
     public $next;
     public $prev;
     
+    function __isset($name) {
+      if( $name == "id" || $name == "title" || $name == "title_url" ||
+        $name == "date" || $name == "timestamp" || $name == "ago" ||
+        $name == "content" || $name == "tags" || $name == "next" ||
+        $name == "prev"
+      ){
+        return true;
+      }
+    }
+
     // create fetch function. this either outputs an error if no post is found or defines properties to be echoed on the page.
     public function fetch($toFetch, $getVar){
     
@@ -222,17 +230,16 @@
       if($toFetch === 'id'){
       
         //query with id number
-        $qry = $dbh->prepare("SELECT * FROM posts WHERE id=$getVar");
+        $qry = $dbh->prepare("SELECT * FROM posts WHERE draft='false' AND id=$getVar");
         $qry->execute();
         $result = $qry->fetch(PDO::FETCH_ASSOC);
         
       } else {
       
         // query with url encoded title
-        $qry = $dbh->prepare("SELECT * FROM posts WHERE title_url='".$getVar."'");
+        $qry = $dbh->prepare("SELECT * FROM posts WHERE draft='false' AND title_url='".$getVar."'");
         $qry->execute();
         $result = $qry->fetch(PDO::FETCH_ASSOC);
-        
       }
       // check results
       if(!($result)){
@@ -241,20 +248,20 @@
         echo 'Post not found.';
         
       // make sure only one row was returned
-      } else if (count($result) == 7) {
+      } else {
       
         // fetch array from query
         $arr = $result;
         
         $nextId = $arr["id"] + 1;
         
-        $nextPost = $dbh->prepare("SELECT * FROM posts WHERE id=".$nextId);
+        $nextPost = $dbh->prepare("SELECT * FROM posts WHERE draft='false' AND id=".$nextId);
         $nextPost->execute();
         $next = $nextPost->fetch(PDO::FETCH_ASSOC);
         
         $prevId = $arr["id"] - 1;
         
-        $prevPost = $dbh->prepare("SELECT * FROM posts WHERE id=".$prevId);
+        $prevPost = $dbh->prepare("SELECT * FROM posts WHERE draft='false' AND id=".$prevId);
         $prevPost->execute();
         $prev = $prevPost->fetch(PDO::FETCH_ASSOC);
         
